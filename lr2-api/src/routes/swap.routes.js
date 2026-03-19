@@ -1,16 +1,15 @@
 const express = require('express');
 const router = express.Router();
-const swapRepo = require('../repository/swap.repository');
+const swapController = require('../controllers/swap.controller');
 
+router.get('/', swapController.getAll);
 
-router.get('/', (req, res) => {
-    res.json(swapRepo.findAll());
-});
+router.get('/:id', swapController.getById);
 
+router.post('/', swapController.create);
 
-router.post('/', (req, res) => {
-    const newSwap = swapRepo.create(req.body);
-    res.status(201).json(newSwap);
-});
+router.put('/:id', swapController.update);
+
+router.delete('/:id', swapController.delete);
 
 module.exports = router;

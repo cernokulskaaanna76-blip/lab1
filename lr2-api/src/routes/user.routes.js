@@ -4,15 +4,12 @@ const userController = require('../controllers/user.controller');
 
 router.get('/', userController.getAll);
 
+router.get('/:id', userController.getById);
 
 router.post('/', userController.create);
 
+router.put('/:id', userController.update);
+
+router.delete('/:id', userController.delete);
+
 module.exports = router;
-router.put('/:id', (req, res) => {
-    const updated = require('../services/user.service').updateUser(req.params.id, req.body);
-    res.json(updated);
-});
-router.delete('/:id', (req, res) => {
-    require('../services/user.service').deleteUser(req.params.id);
-    res.status(204).send();
-});

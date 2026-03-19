@@ -1,0 +1,16 @@
+{
+  "name": "lr2-api",
+  "version": "1.0.0",
+  "description": "REST API for Shift Management",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node src/index.js"
+  },
+  "dependencies": {
+    "dotenv": "^17.3.1",
+    "express": "^4.18.2",
+    "helmet": "^8.1.0",
+    "morgan": "^1.10.1"
+  }
+}
