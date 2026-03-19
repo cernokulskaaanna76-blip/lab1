@@ -1,13 +1,17 @@
 function toUserResponse(user) {
+    if (!user) return null;
+
     return {
         id: user.id,
         name: user.name,
-        email: user.email
+        role: user.role
     };
 }
 
 function toUsersResponse(users) {
-    return users.map(toUserResponse);
+    return {
+        items: Array.isArray(users) ? users.map(toUserResponse) : []
+    };
 }
 
 module.exports = {

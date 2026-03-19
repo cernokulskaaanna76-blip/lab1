@@ -1,12 +1,7 @@
-const express = require("express");
+const app = require('./app');
 
-const app = express();
-app.use(express.json());
+const PORT = 3000;
 
-app.get("/health", (req, res) => {
-    res.status(200).json({ ok: true });
-});
-
-app.listen(3000, () => {
-    console.log("Server started on http://localhost:3000");
+app.listen(PORT, () => {
+    console.log(`Server started on http://localhost:${PORT}`);
 });

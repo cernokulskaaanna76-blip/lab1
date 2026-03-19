@@ -32,12 +32,12 @@ class UserRepository {
     }
 
     async delete(id) {
-        const index = users.findIndex(u => u.id === parseInt(id));
+        const index = users.findIndex(u => u.id === id);
         if (index !== -1) {
-            const deleted = users.splice(index, 1);
-            return deleted[0];
+            users.splice(index, 1);
+            return true;
         }
-        return null;
+        return false;
     }
 }
 

@@ -6,12 +6,13 @@ const toShiftResponse = (shift) => {
         userId: shift.userId,
         date: shift.date,
         type: shift.type
-        
     };
 };
 
 const toShiftsResponse = (shifts) => {
-    return Array.isArray(shifts) ? shifts.map(toShiftResponse) : [];
+    return {
+        items: Array.isArray(shifts) ? shifts.map(toShiftResponse) : []
+    };
 };
 
 module.exports = {
