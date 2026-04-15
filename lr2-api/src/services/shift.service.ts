@@ -1,93 +1,54 @@
+import { CreateShiftDto, PatchShiftDto, UpdateShiftDto } from "../dto/shift.dto";
 import { shiftRepository } from "../repositories/shift.repository";
-import { ApiError } from "../utils/ApiError";
-import {
-    CreateShiftRequestDto,
-    PatchShiftRequestDto,
-    ShiftListQueryDto,
-    UpdateShiftRequestDto,
-} from "../dto/shift.dto";
-
-function toShiftResponse(item: any) {
-    return {
-        id: item.id,
-        scheduleId: item.scheduleId,
-        userId: item.userId,
-        date: item.date,
-        timeSlot: item.timeSlot,
-        comment: item.comment,
-        status: item.status,
-    };
-}
 
 class ShiftService {
-    async getAll(query: ShiftListQueryDto) {
-        const items = (await shiftRepository.findAll(query)).map(toShiftResponse);
-
-        return {
-            items,
-            total: items.length,
-            page: query.page ?? 1,
-            pageSize: query.pageSize ?? 10,
-        };
+    // отримати список shifts
+    async getAll(query: any) {
+        return shiftRepository.getAll(query);
     }
 
-    async getAllWithRelations() {
-        const items = await shiftRepository.findAllWithRelations();
-
-        return {
-            items,
-            total: items.length,
-        };
+    // отримати пов'язані дані через JOIN
+    async getAllWithUsers() {
+        return shiftRepository.getAllWithUsers();
+    }
+    // отримати статистику (агрегація)
+    async getSummaryStats() {
+        return shiftRepository.getSummaryStats();
     }
 
+    // небезпечний пошук (SQL injection demo)
+    async searchUnsafe(comment: string) {
+        return shiftRepository.searchUnsafe(comment);
+    }
+
+    // отримати shift по id
     async getById(id: number) {
-        const item = await shiftRepository.findById(id);
-
-        if (!item) {
-            throw ApiError.notFound("Shift not found");
-        }
-
-        return toShiftResponse(item);
+        return shiftRepository.getById(id);
     }
 
-    async create(dto: CreateShiftRequestDto) {
-        const created = await shiftRepository.create(dto);
-
-        if (!created) {
-            throw ApiError.badRequest("Failed to create shift");
-        }
-
-        return toShiftResponse(created);
+    // створити shift
+    async create(dto: CreateShiftDto) {
+        return shiftRepository.create(dto);
     }
 
-    async update(id: number, dto: UpdateShiftRequestDto) {
-        const updated = await shiftRepository.update(id, dto);
-
-        if (!updated) {
-            throw ApiError.notFound("Shift not found");
-        }
-
-        return toShiftResponse(updated);
+    // повне оновлення
+    async update(id: number, dto: UpdateShiftDto) {
+        return shiftRepository.update(id, dto);
     }
 
-    async patch(id: number, dto: PatchShiftRequestDto) {
-        const updated = await shiftRepository.patch(id, dto);
-
-        if (!updated) {
-            throw ApiError.notFound("Shift not found");
-        }
-
-        return toShiftResponse(updated);
+    // часткове оновлення
+    async patch(id: number, dto: PatchShiftDto) {
+        return shiftRepository.patch(id, dto);
     }
 
+    // змінити користувача для shift
+    async assignUser(id: number, userId: number) {
+        return shiftRepository.assignUser(id, userId);
+    }
+
+    // видалити shift
     async delete(id: number) {
-        const deleted = await shiftRepository.delete(id);
-
-        if (!deleted) {
-            throw ApiError.notFound("Shift not found");
-        }
-
-        return { success: true };
+        return shiftRepository.delete(id);
     }
 }
 

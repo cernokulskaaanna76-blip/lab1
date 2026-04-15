@@ -1,27 +1,21 @@
-export interface UserEntity {
+export interface UserDto {
     id: number;
     name: string;
     email: string;
-    createdAt?: string;
+    createdAt: string;
 }
 
-export interface CreateUserRequestDto {
+export interface CreateUserDto {
     name: string;
     email: string;
 }
 
-export interface UpdateUserRequestDto {
+export interface UpdateUserDto {
     name: string;
     email: string;
 }
 
-export interface PatchUserRequestDto {
+export interface PatchUserDto {
     name?: string;
     email?: string;
-}
-
-export interface UserResponseDto {
-    id: number;
-    name: string;
-    email: string;
 }

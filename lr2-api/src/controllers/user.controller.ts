@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from "express";
-import { userService } from "../services/user.service";
 import { ApiError } from "../utils/ApiError";
+import { userService } from "../services/user.service";
 import {
     validateCreateUser,
     validatePatchUser,
@@ -8,16 +8,16 @@ import {
 } from "../validators/user.validator";
 
 class UserController {
-    getAll = async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+    getAll = async (req: Request, res: Response, next: NextFunction) => {
         try {
-            const result = await userService.getAll();
-            res.status(200).json(result);
+            const result = await userService.getAll(req.query);
+            res.status(200).json({ items: result });
         } catch (error) {
             next(error);
         }
     };
 
-    getById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    getById = async (req: Request, res: Response, next: NextFunction) => {
         try {
             const id = Number(req.params.id);
 
@@ -39,22 +39,22 @@ class UserController {
         }
     };
 
-    create = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    create = async (req: Request, res: Response, next: NextFunction) => {
         try {
             const errors = validateCreateUser(req.body);
 
             if (errors.length > 0) {
-                throw ApiError.badRequest("Invalid request body", errors);
+                throw ApiError.badRequest("Validation failed", errors);
             }
 
-            const result = await userService.create(req.body);
-            res.status(201).json(result);
+            const created = await userService.create(req.body);
+            res.status(201).json(created);
         } catch (error) {
             next(error);
         }
     };
 
-    update = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    update = async (req: Request, res: Response, next: NextFunction) => {
         try {
             const id = Number(req.params.id);
 
@@ -67,22 +67,22 @@ class UserController {
             const errors = validateUpdateUser(req.body);
 
             if (errors.length > 0) {
-                throw ApiError.badRequest("Invalid request body", errors);
+                throw ApiError.badRequest("Validation failed", errors);
             }
 
-            const result = await userService.update(id, req.body);
+            const updated = await userService.update(id, req.body);
 
-            if (!result) {
+            if (!updated) {
                 throw ApiError.notFound("User not found");
             }
 
-            res.status(200).json(result);
+            res.status(200).json(updated);
         } catch (error) {
             next(error);
         }
     };
 
-    patch = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    patch = async (req: Request, res: Response, next: NextFunction) => {
         try {
             const id = Number(req.params.id);
 
@@ -95,22 +95,22 @@ class UserController {
             const errors = validatePatchUser(req.body);
 
             if (errors.length > 0) {
-                throw ApiError.badRequest("Invalid request body", errors);
+                throw ApiError.badRequest("Validation failed", errors);
             }
 
-            const result = await userService.patch(id, req.body);
+            const updated = await userService.patch(id, req.body);
 
-            if (!result) {
+            if (!updated) {
                 throw ApiError.notFound("User not found");
             }
 
-            res.status(200).json(result);
+            res.status(200).json(updated);
         } catch (error) {
             next(error);
         }
     };
 
-    delete = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    delete = async (req: Request, res: Response, next: NextFunction) => {
         try {
             const id = Number(req.params.id);
 

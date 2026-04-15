@@ -1,28 +1,20 @@
 export class ApiError extends Error {
-    statusCode: number;
+    status: number;
     code: string;
-    details: unknown;
+    details: any;
 
-    constructor(statusCode: number, code: string, message: string, details: unknown = null) {
+    constructor(status: number, code: string, message: string, details: any = null) {
         super(message);
-        this.statusCode = statusCode;
+        this.status = status;
         this.code = code;
         this.details = details;
     }
 
-    static badRequest(message = "Bad Request", details: unknown = null) {
+    static badRequest(message: string, details: any = null) {
         return new ApiError(400, "VALIDATION_ERROR", message, details);
     }
 
-    static notFound(message = "Resource not found", details: unknown = null) {
-        return new ApiError(404, "NOT_FOUND", message, details);
-    }
-
-    static conflict(message = "Conflict", details: unknown = null) {
-        return new ApiError(409, "CONFLICT", message, details);
-    }
-
-    static internal(message = "Internal Server Error", details: unknown = null) {
-        return new ApiError(500, "INTERNAL_ERROR", message, details);
+    static notFound(message = "Resource not found") {
+        return new ApiError(404, "NOT_FOUND", message, null);
     }
 }

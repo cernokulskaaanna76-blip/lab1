@@ -1,165 +1,140 @@
 import { all, get, run } from "../db/dbClient";
-
-function esc(value: string) {
-    return String(value).replace(/'/g, "''");
-}
-
-type ShiftFilters = {
-    status?: string;
-    timeSlot?: string;
-    page?: number;
-    pageSize?: number;
-};
-
-type ShiftCreateDto = {
-    scheduleId: number;
-    userId: number;
-    date: string;
-    timeSlot: string;
-    comment?: string;
-    status: string;
-};
-
-type ShiftPatchDto = {
-    scheduleId?: number;
-    userId?: number;
-    date?: string;
-    timeSlot?: string;
-    comment?: string;
-    status?: string;
-};
+import {
+    CreateShiftDto,
+    PatchShiftDto,
+    UpdateShiftDto,
+} from "../dto/shift.dto";
 
 class ShiftRepository {
-    async findAll(filters?: ShiftFilters) {
-        const conditions: string[] = [];
+    async getAll(query: any) {
+        let sql = `SELECT * FROM Shifts WHERE 1=1`;
+        const params: any[] = [];
 
-        if (filters?.status) {
-            conditions.push(`status = '${esc(filters.status)}'`);
+        if (query.status) {
+            sql += ` AND status = ?`;
+            params.push(query.status);
         }
 
-        if (filters?.timeSlot) {
-            conditions.push(`timeSlot = '${esc(filters.timeSlot)}'`);
-        }
+        const sort = query.sort || "id";
+        const order = query.order === "asc" ? "ASC" : "DESC";
 
-        let sql = `
-      SELECT id, scheduleId, userId, date, timeSlot, comment, status, createdAt
-      FROM Shifts
-    `;
+        sql += ` ORDER BY ${sort} ${order}`;
 
-        if (conditions.length > 0) {
-            sql += ` WHERE ${conditions.join(" AND ")}`;
-        }
-
-        sql += ` ORDER BY date DESC`;
-
-        const page = filters?.page && filters.page > 0 ? filters.page : 1;
-        const pageSize = filters?.pageSize && filters.pageSize > 0 ? filters.pageSize : 10;
+        const page = Number(query.page) || 1;
+        const pageSize = Number(query.pageSize) || 10;
         const offset = (page - 1) * pageSize;
 
-        sql += ` LIMIT ${Number(pageSize)} OFFSET ${Number(offset)};`;
+        sql += ` LIMIT ? OFFSET ?`;
+        params.push(pageSize, offset);
 
-        return await all(sql);
+        return all(sql, params);
     }
 
-    async findAllWithRelations() {
-        return await all(`
-      SELECT
-        s.id,
-        s.scheduleId,
-        s.userId,
-        s.date,
-        s.timeSlot,
-        s.comment,
-        s.status,
-        s.createdAt,
-        u.name AS userName,
-        u.email AS userEmail,
-        sc.title AS scheduleTitle
-      FROM Shifts s
-      JOIN Users u ON s.userId = u.id
-      JOIN Schedules sc ON s.scheduleId = sc.id
-      ORDER BY s.date DESC
-      LIMIT 10;
-    `);
+    // JOIN
+    async getAllWithUsers() {
+        const sql = `
+            SELECT s.*, u.name as userName, sc.title as scheduleTitle
+            FROM Shifts s
+            JOIN Users u ON u.id = s.userId
+            JOIN Schedules sc ON sc.id = s.scheduleId
+        `;
+        return all(sql);
     }
 
-    async findById(id: number) {
-        return await get(`
-      SELECT id, scheduleId, userId, date, timeSlot, comment, status, createdAt
-      FROM Shifts
-      WHERE id = ${Number(id)};
-    `);
+    // АГРЕГАЦІЯ
+    async getSummaryStats() {
+        return get(`
+            SELECT
+                COUNT(*) as total,
+                SUM(CASE WHEN status = 'planned' THEN 1 ELSE 0 END) as plannedCount,
+                SUM(CASE WHEN status = 'done' THEN 1 ELSE 0 END) as doneCount,
+                SUM(CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END) as cancelledCount
+            FROM Shifts
+        `);
     }
 
-    async create(data: ShiftCreateDto) {
-        const now = new Date().toISOString();
-
-        const result = await run(`
-      INSERT INTO Shifts (scheduleId, userId, date, timeSlot, comment, status, createdAt)
-      VALUES (
-        ${Number(data.scheduleId)},
-        ${Number(data.userId)},
-        '${esc(data.date)}',
-        '${esc(data.timeSlot)}',
-        '${esc(data.comment ?? "")}',
-        '${esc(data.status)}',
-        '${now}'
-      );
-    `);
-
-        return await this.findById(result.lastID);
+    // SQL INJECTION DEMO (НЕБЕЗПЕЧНО)
+    async searchUnsafe(comment: string) {
+        const sql = `
+            SELECT * FROM Shifts
+            WHERE comment LIKE '%${comment}%'
+        `;
+        return all(sql);
     }
 
-    async update(id: number, data: ShiftCreateDto) {
-        const result = await run(`
-      UPDATE Shifts
-      SET scheduleId = ${Number(data.scheduleId)},
-          userId = ${Number(data.userId)},
-          date = '${esc(data.date)}',
-          timeSlot = '${esc(data.timeSlot)}',
-          comment = '${esc(data.comment ?? "")}',
-          status = '${esc(data.status)}'
-      WHERE id = ${Number(id)};
-    `);
-
-        if (result.changes === 0) return undefined;
-
-        return await this.findById(id);
+    async getById(id: number) {
+        return get(`SELECT * FROM Shifts WHERE id = ?`, [id]);
     }
 
-    async patch(id: number, data: ShiftPatchDto) {
-        const current = await this.findById(id);
-        if (!current) return undefined;
+    async create(dto: CreateShiftDto) {
+        const result = await run(
+            `INSERT INTO Shifts (scheduleId, userId, date, type, status, comment)
+             VALUES (?, ?, ?, ?, ?, ?)`,
+            [
+                dto.scheduleId,
+                dto.userId,
+                dto.date,
+                dto.type,
+                dto.status,
+                dto.comment ?? null,
+            ]
+        );
 
-        const nextScheduleId = data.scheduleId ?? current.scheduleId;
-        const nextUserId = data.userId ?? current.userId;
-        const nextDate = data.date ?? current.date;
-        const nextTimeSlot = data.timeSlot ?? current.timeSlot;
-        const nextComment = data.comment ?? current.comment ?? "";
-        const nextStatus = data.status ?? current.status;
+        return this.getById(result.lastID);
+    }
 
-        await run(`
-      UPDATE Shifts
-      SET scheduleId = ${Number(nextScheduleId)},
-          userId = ${Number(nextUserId)},
-          date = '${esc(nextDate)}',
-          timeSlot = '${esc(nextTimeSlot)}',
-          comment = '${esc(nextComment)}',
-          status = '${esc(nextStatus)}'
-      WHERE id = ${Number(id)};
-    `);
+    async update(id: number, dto: UpdateShiftDto) {
+        const result = await run(
+            `UPDATE Shifts SET scheduleId=?, userId=?, date=?, type=?, status=?, comment=? WHERE id=?`,
+            [
+                dto.scheduleId,
+                dto.userId,
+                dto.date,
+                dto.type,
+                dto.status,
+                dto.comment ?? null,
+                id,
+            ]
+        );
 
-        return await this.findById(id);
+        if (result.changes === 0) return null;
+
+        return this.getById(id);
+    }
+
+    async patch(id: number, dto: PatchShiftDto) {
+        const current = await this.getById(id);
+        if (!current) return null;
+
+        await run(
+            `UPDATE Shifts SET scheduleId=?, userId=?, date=?, type=?, status=?, comment=? WHERE id=?`,
+            [
+                dto.scheduleId ?? current.scheduleId,
+                dto.userId ?? current.userId,
+                dto.date ?? current.date,
+                dto.type ?? current.type,
+                dto.status ?? current.status,
+                dto.comment ?? current.comment,
+                id,
+            ]
+        );
+
+        return this.getById(id);
+    }
+
+    async assignUser(id: number, userId: number) {
+        const result = await run(
+            `UPDATE Shifts SET userId=? WHERE id=?`,
+            [userId, id]
+        );
+        return result.changes > 0;
     }
 
     async delete(id: number) {
-        const result = await run(`
-      DELETE FROM Shifts
-      WHERE id = ${Number(id)};
-    `);
-
+        const result = await run(`DELETE FROM Shifts WHERE id=?`, [id]);
         return result.changes > 0;
     }
 }
 
+// ВАЖЛИВО — правильний export
 export const shiftRepository = new ShiftRepository();

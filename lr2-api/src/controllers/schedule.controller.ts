@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from "express";
-import { scheduleService } from "../services/schedule.service";
 import { ApiError } from "../utils/ApiError";
+import { scheduleService } from "../services/schedule.service";
 import {
     validateCreateSchedule,
     validatePatchSchedule,
@@ -8,76 +8,124 @@ import {
 } from "../validators/schedule.validator";
 
 class ScheduleController {
-    getAll = (_req: Request, res: Response, next: NextFunction): void => {
+    getAll = async (req: Request, res: Response, next: NextFunction) => {
         try {
-            const result = scheduleService.getAll();
-            res.status(200).json(result);
+            const result = await scheduleService.getAll(req.query);
+            res.status(200).json({ items: result });
         } catch (error) {
             next(error);
         }
     };
 
-    getById = (req: Request, res: Response, next: NextFunction): void => {
+    getById = async (req: Request, res: Response, next: NextFunction) => {
         try {
             const id = Number(req.params.id);
-            const result = scheduleService.getById(id);
+
+            if (Number.isNaN(id)) {
+                throw ApiError.badRequest("Invalid id", [
+                    { field: "id", message: "Id must be a number" },
+                ]);
+            }
+
+            const result = await scheduleService.getById(id);
+
+            if (!result) {
+                throw ApiError.notFound("Schedule not found");
+            }
+
             res.status(200).json(result);
         } catch (error) {
             next(error);
         }
     };
 
-    create = (req: Request, res: Response, next: NextFunction): void => {
+    create = async (req: Request, res: Response, next: NextFunction) => {
         try {
             const errors = validateCreateSchedule(req.body);
 
             if (errors.length > 0) {
-                throw ApiError.badRequest("Invalid request body", errors);
+                throw ApiError.badRequest("Validation failed", errors);
             }
 
-            const result = scheduleService.create(req.body);
-            res.status(201).json(result);
+            const created = await scheduleService.create(req.body);
+            res.status(201).json(created);
         } catch (error) {
             next(error);
         }
     };
 
-    update = (req: Request, res: Response, next: NextFunction): void => {
+    update = async (req: Request, res: Response, next: NextFunction) => {
         try {
             const id = Number(req.params.id);
+
+            if (Number.isNaN(id)) {
+                throw ApiError.badRequest("Invalid id", [
+                    { field: "id", message: "Id must be a number" },
+                ]);
+            }
+
             const errors = validateUpdateSchedule(req.body);
 
             if (errors.length > 0) {
-                throw ApiError.badRequest("Invalid request body", errors);
+                throw ApiError.badRequest("Validation failed", errors);
             }
 
-            const result = scheduleService.update(id, req.body);
-            res.status(200).json(result);
+            const updated = await scheduleService.update(id, req.body);
+
+            if (!updated) {
+                throw ApiError.notFound("Schedule not found");
+            }
+
+            res.status(200).json(updated);
         } catch (error) {
             next(error);
         }
     };
 
-    patch = (req: Request, res: Response, next: NextFunction): void => {
+    patch = async (req: Request, res: Response, next: NextFunction) => {
         try {
             const id = Number(req.params.id);
+
+            if (Number.isNaN(id)) {
+                throw ApiError.badRequest("Invalid id", [
+                    { field: "id", message: "Id must be a number" },
+                ]);
+            }
+
             const errors = validatePatchSchedule(req.body);
 
             if (errors.length > 0) {
-                throw ApiError.badRequest("Invalid request body", errors);
+                throw ApiError.badRequest("Validation failed", errors);
             }
 
-            const result = scheduleService.patch(id, req.body);
-            res.status(200).json(result);
+            const updated = await scheduleService.patch(id, req.body);
+
+            if (!updated) {
+                throw ApiError.notFound("Schedule not found");
+            }
+
+            res.status(200).json(updated);
         } catch (error) {
             next(error);
         }
     };
 
-    delete = (req: Request, res: Response, next: NextFunction): void => {
+    delete = async (req: Request, res: Response, next: NextFunction) => {
         try {
             const id = Number(req.params.id);
-            scheduleService.delete(id);
+
+            if (Number.isNaN(id)) {
+                throw ApiError.badRequest("Invalid id", [
+                    { field: "id", message: "Id must be a number" },
+                ]);
+            }
+
+            const deleted = await scheduleService.delete(id);
+
+            if (!deleted) {
+                throw ApiError.notFound("Schedule not found");
+            }
+
             res.status(204).send();
         } catch (error) {
             next(error);

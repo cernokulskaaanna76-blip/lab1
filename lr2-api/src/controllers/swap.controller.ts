@@ -1,86 +1,153 @@
+import { NextFunction, Request, Response } from "express";
+import { swapService } from "../services/swap.service";
+import { ApiError } from "../utils/ApiError";
 import {
-    CreateSwapRequestDto,
-    PatchSwapRequestDto,
-    UpdateSwapRequestDto,
-} from "../dto/swap.dto";
+    validateCreateSwap,
+    validatePatchSwap,
+    validateUpdateSwap,
+} from "../validators/swap.validator";
 
-type ValidationError = {
-    field: string;
-    message: string;
-};
+class SwapController {
+    getAll = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        try {
+            const result = await swapService.getAll(req.query);
+            res.status(200).json({ items: result });
+        } catch (error) {
+            next(error);
+        }
+    };
 
-const ALLOWED_STATUSES = ["pending", "approved", "rejected"];
+    getById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        try {
+            const id = Number(req.params.id);
 
-export function validateCreateSwap(dto: CreateSwapRequestDto): ValidationError[] {
-    const errors: ValidationError[] = [];
+            if (Number.isNaN(id)) {
+                throw ApiError.badRequest("Invalid id", [
+                    { field: "id", message: "Id must be a number" },
+                ]);
+            }
 
-    if (dto.fromUserId === undefined || dto.fromUserId === null) {
-        errors.push({ field: "fromUserId", message: "fromUserId is required" });
-    } else if (typeof dto.fromUserId !== "number") {
-        errors.push({ field: "fromUserId", message: "fromUserId must be a number" });
-    }
+            const result = await swapService.getById(id);
 
-    if (dto.toUserId === undefined || dto.toUserId === null) {
-        errors.push({ field: "toUserId", message: "toUserId is required" });
-    } else if (typeof dto.toUserId !== "number") {
-        errors.push({ field: "toUserId", message: "toUserId must be a number" });
-    }
+            if (!result) {
+                throw ApiError.notFound("Swap request not found");
+            }
 
-    if (dto.shiftId === undefined || dto.shiftId === null) {
-        errors.push({ field: "shiftId", message: "shiftId is required" });
-    } else if (typeof dto.shiftId !== "number") {
-        errors.push({ field: "shiftId", message: "shiftId must be a number" });
-    }
+            res.status(200).json(result);
+        } catch (error) {
+            next(error);
+        }
+    };
 
-    if (!dto.status) {
-        errors.push({ field: "status", message: "status is required" });
-    } else if (!ALLOWED_STATUSES.includes(dto.status)) {
-        errors.push({
-            field: "status",
-            message: "status must be pending, approved or rejected",
-        });
-    }
+    create = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        try {
+            const errors = validateCreateSwap(req.body);
 
-    return errors;
+            if (errors.length > 0) {
+                throw ApiError.badRequest("Validation failed", errors);
+            }
+
+            const result = await swapService.create(req.body);
+            res.status(201).json(result);
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    approve = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        try {
+            const id = Number(req.params.id);
+
+            if (Number.isNaN(id)) {
+                throw ApiError.badRequest("Invalid id", [
+                    { field: "id", message: "Id must be a number" },
+                ]);
+            }
+
+            const result = await swapService.approve(id);
+            res.status(200).json(result);
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    update = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        try {
+            const id = Number(req.params.id);
+
+            if (Number.isNaN(id)) {
+                throw ApiError.badRequest("Invalid id", [
+                    { field: "id", message: "Id must be a number" },
+                ]);
+            }
+
+            const errors = validateUpdateSwap(req.body);
+
+            if (errors.length > 0) {
+                throw ApiError.badRequest("Validation failed", errors);
+            }
+
+            const result = await swapService.update(id, req.body);
+
+            if (!result) {
+                throw ApiError.notFound("Swap request not found");
+            }
+
+            res.status(200).json(result);
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    patch = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        try {
+            const id = Number(req.params.id);
+
+            if (Number.isNaN(id)) {
+                throw ApiError.badRequest("Invalid id", [
+                    { field: "id", message: "Id must be a number" },
+                ]);
+            }
+
+            const errors = validatePatchSwap(req.body);
+
+            if (errors.length > 0) {
+                throw ApiError.badRequest("Validation failed", errors);
+            }
+
+            const result = await swapService.patch(id, req.body);
+
+            if (!result) {
+                throw ApiError.notFound("Swap request not found");
+            }
+
+            res.status(200).json(result);
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    delete = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        try {
+            const id = Number(req.params.id);
+
+            if (Number.isNaN(id)) {
+                throw ApiError.badRequest("Invalid id", [
+                    { field: "id", message: "Id must be a number" },
+                ]);
+            }
+
+            const deleted = await swapService.delete(id);
+
+            if (!deleted) {
+                throw ApiError.notFound("Swap request not found");
+            }
+
+            res.status(200).json({ message: "Swap request deleted successfully" });
+        } catch (error) {
+            next(error);
+        }
+    };
 }
 
-export function validateUpdateSwap(dto: UpdateSwapRequestDto): ValidationError[] {
-    return validateCreateSwap(dto as CreateSwapRequestDto);
-}
-
-export function validatePatchSwap(dto: PatchSwapRequestDto): ValidationError[] {
-    const errors: ValidationError[] = [];
-
-    if (
-        dto.fromUserId !== undefined &&
-        typeof dto.fromUserId !== "number"
-    ) {
-        errors.push({ field: "fromUserId", message: "fromUserId must be a number" });
-    }
-
-    if (
-        dto.toUserId !== undefined &&
-        typeof dto.toUserId !== "number"
-    ) {
-        errors.push({ field: "toUserId", message: "toUserId must be a number" });
-    }
-
-    if (
-        dto.shiftId !== undefined &&
-        typeof dto.shiftId !== "number"
-    ) {
-        errors.push({ field: "shiftId", message: "shiftId must be a number" });
-    }
-
-    if (
-        dto.status !== undefined &&
-        !ALLOWED_STATUSES.includes(dto.status)
-    ) {
-        errors.push({
-            field: "status",
-            message: "status must be pending, approved or rejected",
-        });
-    }
-
-    return errors;
-}
+export const swapController = new SwapController();

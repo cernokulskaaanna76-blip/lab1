@@ -1,89 +1,77 @@
 import { all, get, run } from "../db/dbClient";
-
-export type UserRow = {
-    id: number;
-    name: string;
-    email: string;
-    createdAt: string;
-};
-
-function esc(value: string) {
-    return String(value).replace(/'/g, "''");
-}
+import { CreateUserDto, PatchUserDto, UpdateUserDto, UserDto } from "../dto/user.dto";
 
 class UserRepository {
-    //отримати всіх користувачів
-    async findAll(): Promise<UserRow[]> {
-        return await all<UserRow>(`
-      SELECT id, name, email, createdAt
-      FROM Users
-      ORDER BY id DESC;
-    `);
+    async getAll(query: any): Promise<UserDto[]> {
+        let sql = `SELECT id, name, email, createdAt FROM Users WHERE 1=1`;
+        const params: any[] = [];
+
+        if (query.search) {
+            sql += ` AND (name LIKE ? OR email LIKE ?)`;
+            params.push(`%${query.search}%`, `%${query.search}%`);
+        }
+
+        const allowedSort = ["id", "name", "email", "createdAt"];
+        const sort = allowedSort.includes(query.sort) ? query.sort : "id";
+        const order = query.order === "asc" ? "ASC" : "DESC";
+
+        sql += ` ORDER BY ${sort} ${order}`;
+
+        return all<UserDto>(sql, params);
     }
 
-    //отрим користувача по id
-    async findById(id: number): Promise<UserRow | undefined> {
-        return await get<UserRow>(`
-      SELECT id, name, email, createdAt
-      FROM Users
-      WHERE id = ${Number(id)};
-    `);
+    async getById(id: number): Promise<UserDto | undefined> {
+        return get<UserDto>(
+            `SELECT id, name, email, createdAt FROM Users WHERE id = ?`,
+            [id]
+        );
     }
 
-    //ств користувача
-    async create(name: string, email: string): Promise<UserRow | undefined> {
+    async create(dto: CreateUserDto): Promise<UserDto | undefined> {
         const now = new Date().toISOString();
 
-        const result = await run(`
-      INSERT INTO Users (name, email, createdAt)
-      VALUES ('${esc(name)}', '${esc(email)}', '${now}');
-    `);
+        const result = await run(
+            `INSERT INTO Users (name, email, createdAt) VALUES (?, ?, ?)`,
+            [dto.name, dto.email, now]
+        );
 
-        return await this.findById(result.lastID);
+        return this.getById(result.lastID);
     }
 
-    //повне оновлення
-    async update(id: number, name: string, email: string): Promise<UserRow | undefined> {
-        const result = await run(`
-      UPDATE Users
-      SET name = '${esc(name)}',
-          email = '${esc(email)}'
-      WHERE id = ${Number(id)};
-    `);
+    async update(id: number, dto: UpdateUserDto): Promise<UserDto | null> {
+        const result = await run(
+            `UPDATE Users SET name = ?, email = ? WHERE id = ?`,
+            [dto.name, dto.email, id]
+        );
 
-        if (result.changes === 0) return undefined;
+        if (result.changes === 0) {
+            return null;
+        }
 
-        return await this.findById(id);
+        return (await this.getById(id)) || null;
     }
 
-    //часткове оновлення
-    async patch(
-        id: number,
-        data: { name?: string; email?: string }
-    ): Promise<UserRow | undefined> {
-        const current = await this.findById(id);
-        if (!current) return undefined;
+    async patch(id: number, dto: PatchUserDto): Promise<UserDto | null> {
+        const current = await this.getById(id);
 
-        const nextName = data.name ?? current.name;
-        const nextEmail = data.email ?? current.email;
+        if (!current) {
+            return null;
+        }
 
-        await run(`
-      UPDATE Users
-      SET name = '${esc(nextName)}',
-          email = '${esc(nextEmail)}'
-      WHERE id = ${Number(id)};
-    `);
+        const updatedName = dto.name ?? current.name;
+        const updatedEmail = dto.email ?? current.email;
 
-        return await this.findById(id);
+        await run(`UPDATE Users SET name = ?, email = ? WHERE id = ?`, [
+            updatedName,
+            updatedEmail,
+            id,
+        ]);
+
+        return (await this.getById(id)) || null;
     }
 
-    //видалення
     async delete(id: number): Promise<boolean> {
-        const result = await run(`
-      DELETE FROM Users
-      WHERE id = ${Number(id)};
-    `);
-
+        const result = await run(`DELETE FROM Users WHERE id = ?`, [id]);
         return result.changes > 0;
     }
 }

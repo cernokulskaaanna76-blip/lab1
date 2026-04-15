@@ -1,19 +1,17 @@
 import app from "./app";
-import { initDb } from "./db/initDb";
+import { initDb } from "./db/initDb"; //викликається initDb, який відповідає за підготовку бази даних
 
-const PORT = 3000;
+const PORT = Number(process.env.PORT) || 3000;
 
-async function start() {
-    try {
-        await initDb();
+async function bootstrap() {
+    await initDb();
 
-        app.listen(PORT, () => {
-            console.log(`Server running on http://localhost:${PORT}`);
-        });
-    } catch (err) {
-        console.error("Startup error:", err);
-        process.exit(1);
-    }
+    app.listen(PORT, () => {
+        console.log(`Server running on http://localhost:${PORT}`);
+    });
 }
 
-start();
+bootstrap().catch((err) => {
+    console.error("Startup error:", err);
+    process.exit(1);
+});

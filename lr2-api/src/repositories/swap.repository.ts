@@ -1,122 +1,103 @@
 import { all, get, run } from "../db/dbClient";
-
-export type SwapRow = {
-    id: number;
-    shiftId: number;
-    fromUserId: number;
-    toUserId: number;
-    status: string;
-    createdAt: string;
-};
-
-function esc(value: string) {
-    return String(value).replace(/'/g, "''");
-}
+import {
+    CreateSwapRequestDto,
+    PatchSwapRequestDto,
+    SwapRequestDto,
+    UpdateSwapRequestDto,
+} from "../dto/swap.dto";
 
 class SwapRepository {
-    //всі заявки
-    async findAll(): Promise<SwapRow[]> {
-        return await all<SwapRow>(`
+    async getAll(query: any): Promise<SwapRequestDto[]> {
+        let sql = `
             SELECT id, shiftId, fromUserId, toUserId, status, createdAt
-            FROM SwapRequests
-            ORDER BY id DESC
-            LIMIT 10;
-        `);
+            FROM Swaps
+            WHERE 1=1
+        `;
+        const params: any[] = [];
+
+        if (query.status) {
+            sql += ` AND status = ?`;
+            params.push(query.status);
+        }
+
+        if (query.fromUserId) {
+            sql += ` AND fromUserId = ?`;
+            params.push(Number(query.fromUserId));
+        }
+
+        const allowedSort = ["id", "status", "shiftId", "fromUserId", "toUserId", "createdAt"];
+        const sort = allowedSort.includes(query.sort) ? query.sort : "id";
+        const order = query.order === "asc" ? "ASC" : "DESC";
+
+        sql += ` ORDER BY ${sort} ${order}`;
+
+        return all<SwapRequestDto>(sql, params);
     }
 
-    //по id
-    async findById(id: number): Promise<SwapRow | undefined> {
-        return await get<SwapRow>(`
-            SELECT id, shiftId, fromUserId, toUserId, status, createdAt
-            FROM SwapRequests
-            WHERE id = ${Number(id)};
-        `);
+    async getById(id: number): Promise<SwapRequestDto | undefined> {
+        return get<SwapRequestDto>(
+            `SELECT id, shiftId, fromUserId, toUserId, status, createdAt FROM Swaps WHERE id = ?`,
+            [id]
+        );
     }
 
-    //ств
-    async create(data: {
-        shiftId: number;
-        fromUserId: number;
-        toUserId: number;
-        status: string;
-    }): Promise<SwapRow | undefined> {
+    async create(dto: CreateSwapRequestDto): Promise<SwapRequestDto | undefined> {
         const now = new Date().toISOString();
 
-        const result = await run(`
-            INSERT INTO SwapRequests (shiftId, fromUserId, toUserId, status, createdAt)
-            VALUES (
-                ${Number(data.shiftId)},
-                ${Number(data.fromUserId)},
-                ${Number(data.toUserId)},
-                '${esc(data.status)}',
-                '${now}'
-            );
-        `);
+        const result = await run(
+            `INSERT INTO Swaps (shiftId, fromUserId, toUserId, status, createdAt)
+             VALUES (?, ?, ?, ?, ?)`,
+            [dto.shiftId, dto.fromUserId, dto.toUserId, dto.status, now]
+        );
 
-        return await this.findById(result.lastID);
+        return this.getById(result.lastID);
     }
 
-    //повне оновлення
-    async update(
-        id: number,
-        data: {
-            shiftId: number;
-            fromUserId: number;
-            toUserId: number;
-            status: string;
+    async update(id: number, dto: UpdateSwapRequestDto): Promise<SwapRequestDto | null> {
+        const result = await run(
+            `UPDATE Swaps
+             SET shiftId = ?, fromUserId = ?, toUserId = ?, status = ?
+             WHERE id = ?`,
+            [dto.shiftId, dto.fromUserId, dto.toUserId, dto.status, id]
+        );
+
+        if (result.changes === 0) {
+            return null;
         }
-    ): Promise<SwapRow | undefined> {
-        const result = await run(`
-            UPDATE SwapRequests
-            SET shiftId = ${Number(data.shiftId)},
-                fromUserId = ${Number(data.fromUserId)},
-                toUserId = ${Number(data.toUserId)},
-                status = '${esc(data.status)}'
-            WHERE id = ${Number(id)};
-        `);
 
-        if (result.changes === 0) return undefined;
-
-        return await this.findById(id);
+        return (await this.getById(id)) || null;
     }
 
-    //часткове оновлення
-    async patch(
-        id: number,
-        data: {
-            shiftId?: number;
-            fromUserId?: number;
-            toUserId?: number;
-            status?: string;
+    async patch(id: number, dto: PatchSwapRequestDto): Promise<SwapRequestDto | null> {
+        const current = await this.getById(id);
+
+        if (!current) {
+            return null;
         }
-    ): Promise<SwapRow | undefined> {
-        const current = await this.findById(id);
-        if (!current) return undefined;
 
-        const nextShiftId = data.shiftId ?? current.shiftId;
-        const nextFromUserId = data.fromUserId ?? current.fromUserId;
-        const nextToUserId = data.toUserId ?? current.toUserId;
-        const nextStatus = data.status ?? current.status;
+        await run(
+            `UPDATE Swaps
+             SET shiftId = ?, fromUserId = ?, toUserId = ?, status = ?
+             WHERE id = ?`,
+            [
+                dto.shiftId ?? current.shiftId,
+                dto.fromUserId ?? current.fromUserId,
+                dto.toUserId ?? current.toUserId,
+                dto.status ?? current.status,
+                id,
+            ]
+        );
 
-        await run(`
-            UPDATE SwapRequests
-            SET shiftId = ${Number(nextShiftId)},
-                fromUserId = ${Number(nextFromUserId)},
-                toUserId = ${Number(nextToUserId)},
-                status = '${esc(nextStatus)}'
-            WHERE id = ${Number(id)};
-        `);
-
-        return await this.findById(id);
+        return (await this.getById(id)) || null;
     }
 
-    //видалити
+    async updateStatus(id: number, status: "pending" | "approved" | "rejected"): Promise<boolean> {
+        const result = await run(`UPDATE Swaps SET status = ? WHERE id = ?`, [status, id]);
+        return result.changes > 0;
+    }
+
     async delete(id: number): Promise<boolean> {
-        const result = await run(`
-            DELETE FROM SwapRequests
-            WHERE id = ${Number(id)};
-        `);
-
+        const result = await run(`DELETE FROM Swaps WHERE id = ?`, [id]);
         return result.changes > 0;
     }
 }

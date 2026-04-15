@@ -1,100 +1,81 @@
 import { all, get, run } from "../db/dbClient";
-
-export type ScheduleRow = {
-    id: number;
-    title: string;
-    description: string | null;
-    createdAt: string;
-};
-
-function esc(value: string) {
-    return String(value).replace(/'/g, "''");
-}
+import {
+    CreateScheduleDto,
+    PatchScheduleDto,
+    ScheduleDto,
+    UpdateScheduleDto,
+} from "../dto/schedule.dto";
 
 class ScheduleRepository {
-    //отримати всі розклади
-    async findAll(): Promise<ScheduleRow[]> {
-        return await all<ScheduleRow>(`
-            SELECT id, title, description, createdAt
-            FROM Schedules
-            ORDER BY id DESC
-            LIMIT 10;
-        `);
+    async getAll(query: any): Promise<ScheduleDto[]> {
+        let sql = `SELECT id, title, description, createdAt FROM Schedules WHERE 1=1`;
+        const params: any[] = [];
+
+        if (query.title) {
+            sql += ` AND title LIKE ?`;
+            params.push(`%${query.title}%`);
+        }
+
+        const allowedSort = ["id", "title", "createdAt"];
+        const sort = allowedSort.includes(query.sort) ? query.sort : "id";
+        const order = query.order === "asc" ? "ASC" : "DESC";
+
+        sql += ` ORDER BY ${sort} ${order}`;
+
+        return all<ScheduleDto>(sql, params);
     }
 
-    //отримати розклад по id
-    async findById(id: number): Promise<ScheduleRow | undefined> {
-        return await get<ScheduleRow>(`
-            SELECT id, title, description, createdAt
-            FROM Schedules
-            WHERE id = ${Number(id)};
-        `);
+    async getById(id: number): Promise<ScheduleDto | undefined> {
+        return get<ScheduleDto>(
+            `SELECT id, title, description, createdAt FROM Schedules WHERE id = ?`,
+            [id]
+        );
     }
 
-    //ств розклад
-    async create(data: {
-        title: string;
-        description?: string;
-    }): Promise<ScheduleRow | undefined> {
+    async create(dto: CreateScheduleDto): Promise<ScheduleDto | undefined> {
         const now = new Date().toISOString();
 
-        const result = await run(`
-            INSERT INTO Schedules (title, description, createdAt)
-            VALUES (
-                '${esc(data.title)}',
-                '${esc(data.description ?? "")}',
-                '${now}'
-            );
-        `);
+        const result = await run(
+            `INSERT INTO Schedules (title, description, createdAt) VALUES (?, ?, ?)`,
+            [dto.title, dto.description ?? null, now]
+        );
 
-        return await this.findById(result.lastID);
+        return this.getById(result.lastID);
     }
 
-    //повне оновлення
-    async update(
-        id: number,
-        data: { title: string; description?: string }
-    ): Promise<ScheduleRow | undefined> {
-        const result = await run(`
-            UPDATE Schedules
-            SET title = '${esc(data.title)}',
-                description = '${esc(data.description ?? "")}'
-            WHERE id = ${Number(id)};
-        `);
+    async update(id: number, dto: UpdateScheduleDto): Promise<ScheduleDto | null> {
+        const result = await run(
+            `UPDATE Schedules SET title = ?, description = ? WHERE id = ?`,
+            [dto.title, dto.description ?? null, id]
+        );
 
-        if (result.changes === 0) return undefined;
+        if (result.changes === 0) {
+            return null;
+        }
 
-        return await this.findById(id);
+        return (await this.getById(id)) || null;
     }
 
-    //часткове оновлення
-    async patch(
-        id: number,
-        data: { title?: string; description?: string }
-    ): Promise<ScheduleRow | undefined> {
-        const current = await this.findById(id);
-        if (!current) return undefined;
+    async patch(id: number, dto: PatchScheduleDto): Promise<ScheduleDto | null> {
+        const current = await this.getById(id);
 
-        const nextTitle = data.title ?? current.title;
-        const nextDescription = data.description ?? current.description ?? "";
+        if (!current) {
+            return null;
+        }
 
-        await run(`
-            UPDATE Schedules
-            SET title = '${esc(nextTitle)}',
-                description = '${esc(nextDescription)}'
-            WHERE id = ${Number(id)};
-        `);
+        const updatedTitle = dto.title ?? current.title;
+        const updatedDescription = dto.description ?? current.description;
 
-        return await this.findById(id);
+        await run(
+            `UPDATE Schedules SET title = ?, description = ? WHERE id = ?`,
+            [updatedTitle, updatedDescription ?? null, id]
+        );
+
+        return (await this.getById(id)) || null;
     }
 
-    //видалити
     async delete(id: number): Promise<boolean> {
-        const result = await run(`
-            DELETE FROM Schedules
-            WHERE id = ${Number(id)};
-        `);
-
+        const result = await run(`DELETE FROM Schedules WHERE id = ?`, [id]);
         return result.changes > 0;
     }
 }

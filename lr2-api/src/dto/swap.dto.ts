@@ -1,39 +1,31 @@
-export type SwapRequestStatus = "pending" | "approved" | "rejected";
+export type SwapStatus = "pending" | "approved" | "rejected";
 
-export interface SwapRequestEntity {
+export interface SwapRequestDto {
     id: number;
+    shiftId: number;
     fromUserId: number;
     toUserId: number;
-    shiftId: number;
-    status: SwapRequestStatus;
-    createdAt?: string;
+    status: SwapStatus;
+    createdAt: string;
 }
 
 export interface CreateSwapRequestDto {
+    shiftId: number;
     fromUserId: number;
     toUserId: number;
-    shiftId: number;
-    status: SwapRequestStatus;
+    status: SwapStatus;
 }
 
 export interface UpdateSwapRequestDto {
+    shiftId: number;
     fromUserId: number;
     toUserId: number;
-    shiftId: number;
-    status: SwapRequestStatus;
+    status: SwapStatus;
 }
 
 export interface PatchSwapRequestDto {
+    shiftId?: number;
     fromUserId?: number;
     toUserId?: number;
-    shiftId?: number;
-    status?: SwapRequestStatus;
-}
-
-export interface SwapResponseDto {
-    id: number;
-    fromUserId: number;
-    toUserId: number;
-    shiftId: number;
-    status: SwapRequestStatus;
+    status?: SwapStatus;
 }

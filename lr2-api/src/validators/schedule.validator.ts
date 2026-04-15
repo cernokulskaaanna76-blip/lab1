@@ -1,75 +1,33 @@
 import {
-    CreateScheduleRequestDto,
-    PatchScheduleRequestDto,
-    UpdateScheduleRequestDto,
+    CreateScheduleDto,
+    PatchScheduleDto,
+    UpdateScheduleDto,
 } from "../dto/schedule.dto";
 
-type ValidationError = {
+export type ValidationError = {
     field: string;
     message: string;
 };
 
-export function validateCreateSchedule(dto: CreateScheduleRequestDto): ValidationError[] {
+export function validateCreateSchedule(dto: CreateScheduleDto): ValidationError[] {
     const errors: ValidationError[] = [];
 
-    if (!dto.title || dto.title.trim().length < 2) {
-        errors.push({
-            field: "title",
-            message: "title must be at least 2 characters",
-        });
-    }
-
-    if (dto.description !== undefined && typeof dto.description !== "string") {
-        errors.push({
-            field: "description",
-            message: "description must be a string",
-        });
-    }
-
-    if (
-        dto.description !== undefined &&
-        typeof dto.description === "string" &&
-        dto.description.length > 500
-    ) {
-        errors.push({
-            field: "description",
-            message: "description is too long",
-        });
+    if (typeof dto.title !== "string" || dto.title.trim().length === 0) {
+        errors.push({ field: "title", message: "title is required" });
     }
 
     return errors;
 }
 
-export function validateUpdateSchedule(dto: UpdateScheduleRequestDto): ValidationError[] {
+export function validateUpdateSchedule(dto: UpdateScheduleDto): ValidationError[] {
     return validateCreateSchedule(dto);
 }
 
-export function validatePatchSchedule(dto: PatchScheduleRequestDto): ValidationError[] {
+export function validatePatchSchedule(dto: PatchScheduleDto): ValidationError[] {
     const errors: ValidationError[] = [];
 
-    if (dto.title !== undefined && dto.title.trim().length < 2) {
-        errors.push({
-            field: "title",
-            message: "title must be at least 2 characters",
-        });
-    }
-
-    if (dto.description !== undefined && typeof dto.description !== "string") {
-        errors.push({
-            field: "description",
-            message: "description must be a string",
-        });
-    }
-
-    if (
-        dto.description !== undefined &&
-        typeof dto.description === "string" &&
-        dto.description.length > 500
-    ) {
-        errors.push({
-            field: "description",
-            message: "description is too long",
-        });
+    if (dto.title !== undefined && (typeof dto.title !== "string" || dto.title.trim().length === 0)) {
+        errors.push({ field: "title", message: "title must be a non-empty string" });
     }
 
     return errors;

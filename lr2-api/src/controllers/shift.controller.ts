@@ -8,58 +8,85 @@ import {
 } from "../validators/shift.validator";
 
 class ShiftController {
-    getAll = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-        try {
-            const query = {
-                status: req.query.status as "planned" | "confirmed" | "cancelled" | undefined,
-                timeSlot: req.query.timeSlot as "morning" | "day" | "evening" | "night" | undefined,
-                page: req.query.page ? Number(req.query.page) : 1,
-                pageSize: req.query.pageSize ? Number(req.query.pageSize) : 10,
-            };
 
-            const result = await shiftService.getAll(query);
+    // отримати всі shifts
+    getAll = async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            const result = await shiftService.getAll(req.query);
+            res.status(200).json({
+                items: result,
+                meta: { total: result.length }
+            });
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    // endpoint із JOIN (shift + user + schedule)
+    getAllWithUsers = async (_req: Request, res: Response, next: NextFunction) => {
+        try {
+            const result = await shiftService.getAllWithUsers(); // ✅ без аргументів
+            res.status(200).json({
+                items: result,
+                meta: { total: result.length }
+            });
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    // агрегація (COUNT, SUM)
+    getSummaryStats = async (_req: Request, res: Response, next: NextFunction) => {
+        try {
+            const result = await shiftService.getSummaryStats();
             res.status(200).json(result);
         } catch (error) {
             next(error);
         }
     };
 
-    getAllWithRelations = async (
-        _req: Request,
-        res: Response,
-        next: NextFunction
-    ): Promise<void> => {
+    // SQL injection demo (НЕБЕЗПЕЧНО)
+    searchUnsafe = async (req: Request, res: Response, next: NextFunction) => {
         try {
-            const result = await shiftService.getAllWithRelations();
-            res.status(200).json(result);
+            const comment = String(req.query.comment ?? "");
+            const result = await shiftService.searchUnsafe(comment);
+            res.status(200).json({
+                items: result,
+                meta: { total: result.length }
+            });
         } catch (error) {
             next(error);
         }
     };
 
-    getById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    // GET by id
+    getById = async (req: Request, res: Response, next: NextFunction) => {
         try {
             const id = Number(req.params.id);
 
             if (Number.isNaN(id)) {
-                throw ApiError.badRequest("Invalid id", [
-                    { field: "id", message: "Id must be a number" },
-                ]);
+                throw ApiError.badRequest("Invalid id");
             }
 
             const result = await shiftService.getById(id);
+
+            if (!result) {
+                throw ApiError.notFound("Shift not found");
+            }
+
             res.status(200).json(result);
         } catch (error) {
             next(error);
         }
     };
 
-    create = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    // POST create
+    create = async (req: Request, res: Response, next: NextFunction) => {
         try {
             const errors = validateCreateShift(req.body);
 
             if (errors.length > 0) {
-                throw ApiError.badRequest("Invalid request body", errors);
+                throw ApiError.badRequest("Validation failed");
             }
 
             const result = await shiftService.create(req.body);
@@ -69,64 +96,76 @@ class ShiftController {
         }
     };
 
-    update = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    // PUT update
+    update = async (req: Request, res: Response, next: NextFunction) => {
         try {
             const id = Number(req.params.id);
 
             if (Number.isNaN(id)) {
-                throw ApiError.badRequest("Invalid id", [
-                    { field: "id", message: "Id must be a number" },
-                ]);
+                throw ApiError.badRequest("Invalid id");
             }
 
             const errors = validateUpdateShift(req.body);
 
             if (errors.length > 0) {
-                throw ApiError.badRequest("Invalid request body", errors);
+                throw ApiError.badRequest("Validation failed");
             }
 
             const result = await shiftService.update(id, req.body);
+
+            if (!result) {
+                throw ApiError.notFound("Shift not found");
+            }
+
             res.status(200).json(result);
         } catch (error) {
             next(error);
         }
     };
 
-    patch = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    // PATCH update
+    patch = async (req: Request, res: Response, next: NextFunction) => {
         try {
             const id = Number(req.params.id);
 
             if (Number.isNaN(id)) {
-                throw ApiError.badRequest("Invalid id", [
-                    { field: "id", message: "Id must be a number" },
-                ]);
+                throw ApiError.badRequest("Invalid id");
             }
 
             const errors = validatePatchShift(req.body);
 
             if (errors.length > 0) {
-                throw ApiError.badRequest("Invalid request body", errors);
+                throw ApiError.badRequest("Validation failed");
             }
 
             const result = await shiftService.patch(id, req.body);
+
+            if (!result) {
+                throw ApiError.notFound("Shift not found");
+            }
+
             res.status(200).json(result);
         } catch (error) {
             next(error);
         }
     };
 
-    delete = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    // DELETE
+    delete = async (req: Request, res: Response, next: NextFunction) => {
         try {
             const id = Number(req.params.id);
 
             if (Number.isNaN(id)) {
-                throw ApiError.badRequest("Invalid id", [
-                    { field: "id", message: "Id must be a number" },
-                ]);
+                throw ApiError.badRequest("Invalid id");
             }
 
-            await shiftService.delete(id);
-            res.status(204).send();
+            const deleted = await shiftService.delete(id);
+
+            if (!deleted) {
+                throw ApiError.notFound("Shift not found");
+            }
+
+            res.status(200).json({ message: "Deleted" });
         } catch (error) {
             next(error);
         }

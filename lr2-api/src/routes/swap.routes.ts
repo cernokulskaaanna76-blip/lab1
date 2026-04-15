@@ -6,6 +6,7 @@ const router = Router();
 router.get("/", swapController.getAll);
 router.get("/:id", swapController.getById);
 router.post("/", swapController.create);
+router.post("/:id/approve", swapController.approve);
 router.put("/:id", swapController.update);
 router.patch("/:id", swapController.patch);
 router.delete("/:id", swapController.delete);

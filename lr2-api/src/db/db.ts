@@ -4,7 +4,7 @@ import sqlite3 from "sqlite3";
 
 sqlite3.verbose();
 
-const dataDir = path.join(__dirname, "../../data");
+const dataDir = path.join(process.cwd(), "data");
 const dbPath = path.join(dataDir, "app.db");
 
 if (!fs.existsSync(dataDir)) {
@@ -16,5 +16,6 @@ export const db = new sqlite3.Database(dbPath, (err) => {
         console.error("Failed to open SQLite DB:", err.message);
         process.exit(1);
     }
-    console.log("SQLite DB opened:", dbPath);
+
+    console.log(`SQLite DB opened: ${dbPath}`);
 });

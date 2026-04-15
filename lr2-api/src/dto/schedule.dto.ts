@@ -1,27 +1,21 @@
-export interface ScheduleEntity {
+export interface ScheduleDto {
     id: number;
     title: string;
-    description?: string | null;
-    createdAt?: string;
+    description: string | null;
+    createdAt: string;
 }
 
-export interface CreateScheduleRequestDto {
+export interface CreateScheduleDto {
     title: string;
     description?: string;
 }
 
-export interface UpdateScheduleRequestDto {
+export interface UpdateScheduleDto {
     title: string;
     description?: string;
 }
 
-export interface PatchScheduleRequestDto {
+export interface PatchScheduleDto {
     title?: string;
     description?: string;
-}
-
-export interface ScheduleResponseDto {
-    id: number;
-    title: string;
-    description?: string | null;
 }

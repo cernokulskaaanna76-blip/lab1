@@ -1,47 +1,54 @@
-export type ShiftStatus = "planned" | "confirmed" | "cancelled";
-export type ShiftTimeSlot = "morning" | "day" | "evening" | "night";
+export type ShiftType = "day" | "night";
+export type ShiftStatus = "planned" | "done" | "cancelled";
 
-export interface ShiftEntity {
+export interface ShiftDto {
     id: number;
     scheduleId: number;
     userId: number;
     date: string;
-    timeSlot: ShiftTimeSlot;
+    type: ShiftType;
+    status: ShiftStatus;
     comment?: string | null;
-    status: ShiftStatus;
-    createdAt?: string;
+    createdAt: string;
 }
 
-export interface CreateShiftRequestDto {
+export interface ShiftWithUserDto {
+    id: number;
     scheduleId: number;
     userId: number;
     date: string;
-    timeSlot: ShiftTimeSlot;
-    comment?: string;
+    type: ShiftType;
     status: ShiftStatus;
+    comment?: string | null;
+    createdAt: string;
+    userName: string;
+    userEmail: string;
+    scheduleTitle: string;
 }
 
-export interface UpdateShiftRequestDto {
+export interface CreateShiftDto {
     scheduleId: number;
     userId: number;
     date: string;
-    timeSlot: ShiftTimeSlot;
-    comment?: string;
+    type: ShiftType;
     status: ShiftStatus;
+    comment?: string;
 }
 
-export interface PatchShiftRequestDto {
+export interface UpdateShiftDto {
+    scheduleId: number;
+    userId: number;
+    date: string;
+    type: ShiftType;
+    status: ShiftStatus;
+    comment?: string;
+}
+
+export interface PatchShiftDto {
     scheduleId?: number;
     userId?: number;
     date?: string;
-    timeSlot?: ShiftTimeSlot;
+    type?: ShiftType;
+    status?: ShiftStatus;
     comment?: string;
-    status?: ShiftStatus;
-}
-
-export interface ShiftListQueryDto {
-    status?: ShiftStatus;
-    timeSlot?: ShiftTimeSlot;
-    page?: number;
-    pageSize?: number;
 }

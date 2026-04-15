@@ -1,31 +1,27 @@
-import {
-    CreateShiftRequestDto,
-    PatchShiftRequestDto,
-    UpdateShiftRequestDto,
-} from "../dto/shift.dto";
+import { CreateShiftDto, PatchShiftDto, UpdateShiftDto } from "../dto/shift.dto";
 
-type ValidationError = {
+export type ValidationError = {
     field: string;
     message: string;
 };
 
-const allowedStatuses = ["planned", "confirmed", "cancelled"];
-const allowedTimeSlots = ["morning", "day", "evening", "night"];
+const allowedTypes = ["day", "night"];
+const allowedStatuses = ["planned", "done", "cancelled"];
 
-export function validateCreateShift(dto: CreateShiftRequestDto): ValidationError[] {
+export function validateCreateShift(dto: CreateShiftDto): ValidationError[] {
     const errors: ValidationError[] = [];
 
-    if (typeof dto.scheduleId !== "number") {
+    if (typeof dto.scheduleId !== "number" || dto.scheduleId <= 0) {
         errors.push({
             field: "scheduleId",
-            message: "scheduleId must be a number",
+            message: "scheduleId must be a positive number",
         });
     }
 
-    if (typeof dto.userId !== "number") {
+    if (typeof dto.userId !== "number" || dto.userId <= 0) {
         errors.push({
             field: "userId",
-            message: "userId must be a number",
+            message: "userId must be a positive number",
         });
     }
 
@@ -36,76 +32,77 @@ export function validateCreateShift(dto: CreateShiftRequestDto): ValidationError
         });
     }
 
-    if (!allowedTimeSlots.includes(dto.timeSlot)) {
+    if (typeof dto.type !== "string" || !allowedTypes.includes(dto.type)) {
         errors.push({
-            field: "timeSlot",
-            message: "timeSlot must be morning, day, evening or night",
+            field: "type",
+            message: "type must be one of: day, night",
         });
     }
 
-    if (!allowedStatuses.includes(dto.status)) {
+    if (typeof dto.status !== "string" || !allowedStatuses.includes(dto.status)) {
         errors.push({
             field: "status",
-            message: "status must be planned, confirmed or cancelled",
-        });
-    }
-
-    if (dto.comment !== undefined && typeof dto.comment !== "string") {
-        errors.push({
-            field: "comment",
-            message: "comment must be a string",
+            message: "status must be one of: planned, done, cancelled",
         });
     }
 
     return errors;
 }
 
-export function validateUpdateShift(dto: UpdateShiftRequestDto): ValidationError[] {
+export function validateUpdateShift(dto: UpdateShiftDto): ValidationError[] {
     return validateCreateShift(dto);
 }
 
-export function validatePatchShift(dto: PatchShiftRequestDto): ValidationError[] {
+export function validatePatchShift(dto: PatchShiftDto): ValidationError[] {
     const errors: ValidationError[] = [];
 
-    if (dto.scheduleId !== undefined && typeof dto.scheduleId !== "number") {
+    if (
+        dto.scheduleId !== undefined &&
+        (typeof dto.scheduleId !== "number" || dto.scheduleId <= 0)
+    ) {
         errors.push({
             field: "scheduleId",
-            message: "scheduleId must be a number",
+            message: "scheduleId must be a positive number",
         });
     }
 
-    if (dto.userId !== undefined && typeof dto.userId !== "number") {
+    if (
+        dto.userId !== undefined &&
+        (typeof dto.userId !== "number" || dto.userId <= 0)
+    ) {
         errors.push({
             field: "userId",
-            message: "userId must be a number",
+            message: "userId must be a positive number",
         });
     }
 
-    if (dto.date !== undefined && (typeof dto.date !== "string" || dto.date.trim().length === 0)) {
+    if (
+        dto.date !== undefined &&
+        (typeof dto.date !== "string" || dto.date.trim().length === 0)
+    ) {
         errors.push({
             field: "date",
             message: "date must be a non-empty string",
         });
     }
 
-    if (dto.timeSlot !== undefined && !allowedTimeSlots.includes(dto.timeSlot)) {
+    if (
+        dto.type !== undefined &&
+        (typeof dto.type !== "string" || !allowedTypes.includes(dto.type))
+    ) {
         errors.push({
-            field: "timeSlot",
-            message: "timeSlot must be morning, day, evening or night",
+            field: "type",
+            message: "type must be one of: day, night",
         });
     }
 
-    if (dto.status !== undefined && !allowedStatuses.includes(dto.status)) {
+    if (
+        dto.status !== undefined &&
+        (typeof dto.status !== "string" || !allowedStatuses.includes(dto.status))
+    ) {
         errors.push({
             field: "status",
-            message: "status must be planned, confirmed or cancelled",
-        });
-    }
-
-    if (dto.comment !== undefined && typeof dto.comment !== "string") {
-        errors.push({
-            field: "comment",
-            message: "comment must be a string",
+            message: "status must be one of: planned, done, cancelled",
         });
     }
 
